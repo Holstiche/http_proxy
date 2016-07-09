@@ -1,13 +1,20 @@
 //This is executable code so pakage is main
 package main
 
-//all needed packages should be imported here
+//all needed packages are imported here
 import (
-	//"example_import"
+	"fmt"
+	"net/http"
 )
 
-//other code van come here
+//Here our handler function is definded
+func handler(w http.ResponseWriter, r *http.Request) {
+	url := r.URL.Path[1:]
+	fmt.Fprintf(w, url)
+}
 
+//our main code shloud come here
 func main() {
-	//our main code shloud come here
+	http.HandleFunc("/", handler)
+	http.ListenAndServe(":8080", nil)
 }
