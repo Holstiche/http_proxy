@@ -1,37 +1,64 @@
-//This is executable code so package is main
 package main
 
 //all needed packages are imported here
 import (
 	"fmt"
-	"net/http"
 	"log"
+	"net/http"
+	"io"
 )
 
-//Here our handler function is definded
-func handler(w http.ResponseWriter, r *http.Request) {
-	//The url of the server the client wants to acces via the proxy is passed as a url-argument
-	url := r.URL.Path[1:]
-	//wordt gebruikt voor debuggen
-	fmt.Fprintf(w, url)	
-	//url validatie en flexibiliteit moet nog geimplementeerd worden
+//To do
+//2: when an url is clicked it should also be accesed through the proxy
+//3: url fixing
+//4: add header support, contenttype
+//5: add other methods 
+//6: remove fmt debugginh
+//7: implement go routines for better performance
 
-	if r.Method == "GET" {
-		fmt.Fprintf(w, "r.Method is GET")
-		resp, err := http.Get(url)
-		//error handling
-		if err != nil {
-			log.Fatal(err)
-		}
-		//is dit wel echt nodig???
-		defer resp.Body.Close()
-	}
+type Proxy struct {
 }
 
+func NewProxy() *Proxy { return &Proxy{} }
+
+func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("proxy accessed")
+	var resp *http.Response
+	var err error
+
+	switch r.Method {
+	default:
+		{
+			fmt.Println("Cannot handle method ", r.Method)
+			return
+		}
+	case "GET":
+		{
+			fmt.Println("getting")
+			fmt.Println(r.URL.String()[1:])
+			resp, err = http.Get(r.URL.String()[1:])
+			r.Body.Close()
+		}
+	case "POST":
+		{
+			fmt.Println("posting")
+			//contenttype moet worden aangepast
+			resp, err = http.Post(r.URL.String()[1:], r.Header["Content-Type"][0], r.Body)
+			r.Body.Close()
+		}
+	}
+
+	// combined for GET/POST
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	io.Copy(w, resp.Body)
+	//resp.Write(w)
+	defer resp.Body.Close()
+}
 
 func main() {
-	//The handler function is bound to the "/" url
-	http.HandleFunc("/", handler)
-	//The server is created
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	proxy := NewProxy()
+	log.Fatal(http.ListenAndServe(":8080/", proxy))
 }
